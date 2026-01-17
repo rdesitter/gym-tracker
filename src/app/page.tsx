@@ -1,44 +1,25 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useState, useEffect } from 'react';
 import { UserConfig } from '@/types';
-import { saveConfig, getDefaultConfig } from '@/lib/storage';
+import { getConfig, saveConfig, getDefaultConfig } from '@/lib/storage';
 import AvailabilityForm from '@/components/AvailabilityForm';
 import EmailConfig from '@/components/EmailConfig';
 import CourseWidget from '@/components/CourseWidget';
 
-const STORAGE_KEY = 'gym-tracker-config';
-
-function subscribeToStorage(callback: () => void) {
-  window.addEventListener('storage', callback);
-  return () => window.removeEventListener('storage', callback);
-}
-
-function getStorageSnapshot(): UserConfig {
-  if (typeof window === 'undefined') return getDefaultConfig();
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) return getDefaultConfig();
-  try {
-    return JSON.parse(stored) as UserConfig;
-  } catch {
-    return getDefaultConfig();
-  }
-}
-
-function getServerSnapshot(): UserConfig {
-  return getDefaultConfig();
-}
-
 export default function Home() {
-  const storedConfig = useSyncExternalStore(
-    subscribeToStorage,
-    getStorageSnapshot,
-    getServerSnapshot
-  );
-  const [config, setConfig] = useState<UserConfig>(storedConfig);
+  const [config, setConfig] = useState<UserConfig>(getDefaultConfig);
   const [activeTab, setActiveTab] = useState<'schedule' | 'settings'>('schedule');
   const [saved, setSaved] = useState(false);
   const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    const stored = getConfig();
+    if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setConfig(stored);
+    }
+  }, []);
 
   const handleSave = async () => {
     // Sauvegarder localement
