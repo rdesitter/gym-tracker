@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Gym Tracker - Gym du Plateau',
   description: 'Surveillez les cours du Gym du Plateau et recevez des notifications',
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function RootLayout({

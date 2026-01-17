@@ -1,24 +1,44 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { UserConfig } from '@/types';
-import { getConfig, saveConfig, getDefaultConfig } from '@/lib/storage';
+import { saveConfig, getDefaultConfig } from '@/lib/storage';
 import AvailabilityForm from '@/components/AvailabilityForm';
 import EmailConfig from '@/components/EmailConfig';
 import CourseWidget from '@/components/CourseWidget';
 
+const STORAGE_KEY = 'gym-tracker-config';
+
+function subscribeToStorage(callback: () => void) {
+  window.addEventListener('storage', callback);
+  return () => window.removeEventListener('storage', callback);
+}
+
+function getStorageSnapshot(): UserConfig {
+  if (typeof window === 'undefined') return getDefaultConfig();
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (!stored) return getDefaultConfig();
+  try {
+    return JSON.parse(stored) as UserConfig;
+  } catch {
+    return getDefaultConfig();
+  }
+}
+
+function getServerSnapshot(): UserConfig {
+  return getDefaultConfig();
+}
+
 export default function Home() {
-  const [config, setConfig] = useState<UserConfig>(getDefaultConfig());
+  const storedConfig = useSyncExternalStore(
+    subscribeToStorage,
+    getStorageSnapshot,
+    getServerSnapshot
+  );
+  const [config, setConfig] = useState<UserConfig>(storedConfig);
   const [activeTab, setActiveTab] = useState<'schedule' | 'settings'>('schedule');
   const [saved, setSaved] = useState(false);
   const [syncing, setSyncing] = useState(false);
-
-  useEffect(() => {
-    const stored = getConfig();
-    if (stored) {
-      setConfig(stored);
-    }
-  }, []);
 
   const handleSave = async () => {
     // Sauvegarder localement
@@ -66,7 +86,7 @@ export default function Home() {
         const data = await response.json();
         alert(`Erreur: ${data.error}`);
       }
-    } catch (error) {
+    } catch {
       alert('Erreur lors de l\'envoi');
     }
   };
@@ -145,23 +165,6 @@ export default function Home() {
               >
                 Tester les notifications
               </button>
-            </div>
-
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-              <h3 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
-                Configuration serveur requise
-              </h3>
-              <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                Pour que les notifications fonctionnent, configurez les variables
-                d'environnement suivantes sur Vercel :
-              </p>
-              <ul className="mt-2 text-sm text-yellow-700 dark:text-yellow-300 list-disc list-inside">
-                <li>SMTP_HOST (ex: smtp.gmail.com)</li>
-                <li>SMTP_PORT (ex: 587)</li>
-                <li>SMTP_USER (votre email)</li>
-                <li>SMTP_PASS (mot de passe d'application)</li>
-                <li>CRON_SECRET (clé secrète pour le cron)</li>
-              </ul>
             </div>
           </div>
         )}
